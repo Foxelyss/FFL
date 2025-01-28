@@ -1,4 +1,4 @@
-package funkin.ui.mainmenu;
+package funkin.ui.book;
 
 import funkin.graphics.FunkinSprite;
 import flixel.addons.transition.FlxTransitionableState;
@@ -23,7 +23,6 @@ import flixel.util.FlxTimer;
 import funkin.ui.AtlasMenuList;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.MenuList;
-import funkin.ui.book.BookState;
 import funkin.ui.title.TitleState;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.Prompt;
@@ -36,7 +35,7 @@ import funkin.ui.NgPrompt;
 import io.newgrounds.NG;
 #end
 
-class MainMenuState extends MusicBeatState
+class BookState extends MusicBeatState
 {
   var menuItems:MenuTypedList<AtlasMenuItem>;
 
@@ -137,10 +136,6 @@ class MainMenuState extends MusicBeatState
 
     createMenuItem('credits', 'mainmenu/credits', function() {
       startExitState(() -> new funkin.ui.credits.CreditsState());
-    });
-
-    createMenuItem('asd', 'mainmenu/credits', function() {
-      startExitState(() -> new funkin.ui.book.BookState());
     });
 
     // Reset position of menu items.
