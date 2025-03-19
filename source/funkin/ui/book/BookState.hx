@@ -4,6 +4,8 @@ import funkin.graphics.FunkinSprite;
 import flixel.addons.transition.FlxTransitionableState;
 import funkin.ui.debug.DebugMenuSubState;
 import flixel.FlxObject;
+import flixel.FlxG;
+import flixel.addons.ui.FlxUIButton;
 import flixel.FlxSprite;
 import flixel.FlxState;
 import flixel.addons.transition.FlxTransitionableState;
@@ -106,14 +108,14 @@ class BookState extends MusicBeatState
   ];
 
   // Кнопки выбора персонажей
-  var characterButtons:Array<FlxButton>;
+  var characterButtons:Array<FlxUIButton>;
 
   // Элементы для отображения информации о выбранном персонаже
   var selectedCharacterName:FlxText;
   var selectedCharacterDescription:FlxText;
   var playButton:FlxButton;
 
-  var screenSize = (1280, 720);
+  var screenSize = [1280, 720];
 
   override public function create():Void
   {
@@ -131,7 +133,7 @@ class BookState extends MusicBeatState
     persistentUpdate = true;
     persistentDraw = true;
 
-    var bg:FlxSprite = new FlxSprite(Paths.image('menuBG'));
+    var bg:FlxSprite = new FlxSprite(Paths.image('book/title_screen.png'));
     bg.scrollFactor.x = 0;
     bg.scrollFactor.y = 0.17;
     bg.setGraphicSize(Std.int(bg.width * 1.2));
@@ -140,12 +142,19 @@ class BookState extends MusicBeatState
     add(bg);
     trace("123123");
     // Создаем кнопки выбора персонажей
-    var buttonHeights = screenSize[0];
+    var buttonHeights = screenSize[1] / 3;
     characterButtons = [];
     for (i in 0...characters.length)
     {
-      var characterButton = new FlxButton(100, 10 + i * 50, characters[i].name, function() onCharacterSelected(i));
+      var characterButton = new FlxUIButton(100, 10 + i * buttonHeights, characters[i].name, function() onCharacterSelected(i));
       characterButton.label.font = "Arial";
+      characterButton.label.size = 46;
+      // characterButton.height = buttonHeights;
+      // characterButton.width = buttonHeights;
+      // characterButton.label.fieldWidth *= 3;
+      // characterButton.scale.x = characterButton.scale.y = 3;
+      characterButton.updateHitbox();
+      // characterButton.icon = new FlxSprite(Paths.image('menuBG'));
       add(characterButton);
       characterButtons.push(characterButton);
     }
@@ -173,11 +182,12 @@ class BookState extends MusicBeatState
   private function updateCharacterInfo(index:Int):Void
   {
     var characterData = characters[index];
+    var startX = screenSize[0] / 2;
 
     // Обновляем имя персонажа
     if (selectedCharacterName == null)
     {
-      selectedCharacterName = new FlxText(300, 20, 200, characterData.name, 62);
+      selectedCharacterName = new FlxText(startX, 20, startX - 10, characterData.name, 62);
       selectedCharacterName.font = "Arial";
       add(selectedCharacterName);
     }
@@ -189,7 +199,7 @@ class BookState extends MusicBeatState
     // Обновляем описание персонажа
     if (selectedCharacterDescription == null)
     {
-      selectedCharacterDescription = new FlxText(300, 60, 200, characterData.description, 42);
+      selectedCharacterDescription = new FlxText(startX, 60, startX - 10, characterData.description, 42);
       selectedCharacterDescription.font = "Arial";
       add(selectedCharacterDescription);
     }
@@ -201,7 +211,7 @@ class BookState extends MusicBeatState
     // Обновляем кнопку "Играть"
     if (playButton == null)
     {
-      playButton = new FlxButton(300, 120, characterData.buttonLabel, onPlayClicked);
+      playButton = new FlxButton(startX, 120, characterData.buttonLabel, onPlayClicked);
       playButton.label.font = "Arial";
       add(playButton);
     }
@@ -233,7 +243,7 @@ class BookState extends MusicBeatState
 
     PlayStatePlaylist.isStoryMode = false;
 
-    var targetSongId:String = 'unknown'; // cap?.freeplayData?.data.id ?? 'unknown';
+    var targetSongId:String = 'Test'; // cap?.freeplayData?.data.id ?? 'unknown';
     var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId);
     if (targetSongNullable == null)
     {
