@@ -27,214 +27,442 @@ import openfl.utils.Assets;
 #if FEATURE_DISCORD_RPC
 import funkin.api.discord.DiscordClient;
 #end
+import funkin.graphics.FunkinSprite;
+import flixel.addons.transition.FlxTransitionableState;
+import funkin.ui.debug.DebugMenuSubState;
+import flixel.FlxObject;
+import flixel.FlxSprite;
+import flixel.FlxState;
+import flixel.addons.transition.FlxTransitionableState;
+import flixel.effects.FlxFlicker;
+import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.util.typeLimit.NextState;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.input.touch.FlxTouch;
+import flixel.text.FlxText;
+import funkin.data.song.SongData.SongMusicData;
+import flixel.tweens.FlxEase;
+import funkin.graphics.FunkinCamera;
+import funkin.audio.FunkinSound;
+import flixel.tweens.FlxTween;
+import funkin.ui.MusicBeatState;
+import flixel.util.FlxTimer;
+import funkin.ui.AtlasMenuList;
+import funkin.ui.freeplay.FreeplayState;
+import funkin.ui.MenuList;
+import funkin.ui.book.BookState;
+import funkin.ui.title.TitleState;
+import funkin.ui.story.StoryMenuState;
+import funkin.ui.Prompt;
+import funkin.util.WindowUtil;
+import funkin.graphics.FunkinSprite;
+import flixel.addons.transition.FlxTransitionableState;
+import funkin.ui.debug.DebugMenuSubState;
+import flixel.FlxObject;
+import flixel.FlxG;
+import flixel.addons.ui.FlxUIButton;
+import flixel.addons.ui.FlxUISpriteButton;
+import flixel.FlxSprite;
+import flixel.FlxState;
+import flixel.addons.transition.FlxTransitionableState;
+import flixel.effects.FlxFlicker;
+import flixel.graphics.frames.FlxAtlasFrames;
+import flixel.util.typeLimit.NextState;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.input.touch.FlxTouch;
+import flixel.text.FlxText;
+import funkin.data.song.SongData.SongMusicData;
+import flixel.tweens.FlxEase;
+import funkin.graphics.FunkinCamera;
+import funkin.audio.FunkinSound;
+import flixel.tweens.FlxTween;
+import funkin.ui.MusicBeatState;
+import flixel.util.FlxTimer;
+import funkin.ui.AtlasMenuList;
+import funkin.ui.freeplay.FreeplayState;
+import funkin.ui.MenuList;
+import funkin.ui.title.TitleState;
+import funkin.ui.story.StoryMenuState;
+import funkin.ui.Prompt;
+import funkin.util.WindowUtil;
+import flixel.FlxG;
+import flixel.FlxSprite;
+import flixel.FlxState;
+import flixel.text.FlxText;
+import flixel.ui.FlxButton;
+import flixel.util.FlxColor;
+import funkin.ui.freeplay.backcards.*;
+import flixel.addons.transition.FlxTransitionableState;
+import flixel.FlxCamera;
+import flixel.FlxSprite;
+import flixel.group.FlxGroup;
+import flixel.group.FlxGroup.FlxTypedGroup;
+import flixel.group.FlxSpriteGroup.FlxTypedSpriteGroup;
+import flixel.input.touch.FlxTouch;
+import flixel.math.FlxAngle;
+import flixel.math.FlxMath;
+import flixel.math.FlxPoint;
+import flixel.system.debug.watch.Tracker.TrackerProfile;
+import flixel.text.FlxText;
+import flixel.tweens.FlxEase;
+import flixel.tweens.FlxTween;
+import flixel.tweens.misc.ShakeTween;
+import flixel.util.FlxColor;
+import flixel.util.FlxSpriteUtil;
+import flixel.util.FlxTimer;
+import funkin.audio.FunkinSound;
+import funkin.data.freeplay.player.PlayerRegistry;
+import funkin.data.song.SongRegistry;
+import funkin.data.story.level.LevelRegistry;
+import funkin.effects.IntervalShake;
+import funkin.graphics.adobeanimate.FlxAtlasSprite;
+import funkin.graphics.FunkinCamera;
+import funkin.graphics.FunkinSprite;
+import funkin.graphics.shaders.AngleMask;
+import funkin.graphics.shaders.GaussianBlurShader;
+import funkin.graphics.shaders.HSVShader;
+import funkin.graphics.shaders.PureColor;
+import funkin.graphics.shaders.BlueFade;
+import funkin.graphics.shaders.StrokeShader;
+import openfl.filters.ShaderFilter;
+import funkin.input.Controls;
+import funkin.play.PlayStatePlaylist;
+import funkin.play.scoring.Scoring;
+import funkin.play.scoring.Scoring.ScoringRank;
+import funkin.play.song.Song;
+import funkin.save.Save;
+import funkin.save.Save.SaveScoreData;
+import funkin.ui.AtlasText;
+import funkin.ui.freeplay.charselect.PlayableCharacter;
+import funkin.ui.freeplay.SongMenuItem.FreeplayRank;
+import funkin.ui.mainmenu.MainMenuState;
+import funkin.ui.MusicBeatSubState;
+import funkin.ui.story.Level;
+import funkin.ui.transition.LoadingState;
+import funkin.ui.transition.StickerSubState;
+import funkin.util.MathUtil;
+import funkin.util.SortUtil;
+import openfl.display.BlendMode;
+import funkin.data.freeplay.style.FreeplayStyleRegistry;
+import funkin.data.song.SongData.SongMusicData;
+import funkin.input.Cursor;
+#if FEATURE_DISCORD_RPC
+import funkin.api.discord.DiscordClient;
+#end
+#if newgrounds
+import funkin.ui.NgPrompt;
+import io.newgrounds.NG;
+#end
 
 class StoryMenuState extends MusicBeatState
 {
-  static final DEFAULT_BACKGROUND_COLOR:FlxColor = FlxColor.fromString('#F9CF51');
-  static final BACKGROUND_HEIGHT:Int = 400;
+  var menuItems:MenuTypedList<AtlasMenuItem>;
 
-  var currentDifficultyId:String = 'normal';
+  var magenta:FlxSprite;
+  var camFollow:FlxObject;
+  var characters = [
+    {
+      name: "BookFox",
+      description: "Описание персонажа А",
+      buttonLabel: "Биться против",
+      portrait: "book/portr_a",
+      levelId: "bookfox"
+    },
+    {
+      name: "Gunslinger",
+      description: "Описание персонажа B",
+      buttonLabel: "Биться против",
+      portrait: "book/portr_b",
+      levelId: "gunslinger"
+    },
+    {
+      name: "Halfway kek",
+      description: "Описание персонажа C",
+      buttonLabel: "Биться против",
+      portrait: "book/portr_c",
+      levelId: "halfway-dead"
+    }
+  ];
 
-  var currentLevelId:String = 'tutorial';
-  var currentLevel:Level;
-  var isLevelUnlocked:Bool;
-  var currentLevelTitle:LevelTitle;
+  // Кнопки выбора персонажей
+  var characterButtons:Array<FlxUIButton>;
 
-  var highScore:Int = 42069420;
-  var highScoreLerp:Int = 12345678;
+  // Элементы для отображения информации о выбранном персонаже
+  var selectedCharacterName:FlxText;
+  var selectedCharacterDescription:FlxText;
+  var playButton:FlxUIButton;
 
-  var exitingMenu:Bool = false;
-  var selectedLevel:Bool = false;
+  var screenSize = [1280, 720];
+  var overrideMusic:Bool = false;
+  var levelId:String = "bookfox";
+  var player = new FlxSprite();
+  var picoToggle:FlxTypedButton<FlxSprite>;
+  var picoToggleState = false;
 
-  //
-  // RENDER OBJECTS
-  //
+  var zakladka = new FlxSprite();
+  var zakladka_pico = new FlxSprite();
 
-  /**
-   * The title of the level at the top.
-   */
-  var levelTitleText:FlxText;
+  var portraitView = new FlxSprite();
 
-  /**
-   * The score text at the top.
-   */
-  var scoreText:FlxText;
-
-  /**
-   * The mode text at the top-middle.
-   */
-  var modeText:FlxText;
-
-  /**
-   * The list of songs on the left.
-   */
-  var tracklistText:FlxText;
-
-  /**
-   * The titles of the levels in the middle.
-   */
-  var levelTitles:FlxTypedGroup<LevelTitle>;
-
-  /**
-   * The props in the center.
-   */
-  var levelProps:FlxTypedGroup<LevelProp>;
-
-  /**
-   * The background behind the props.
-   */
-  var levelBackground:FlxSprite;
-
-  /**
-   * The left arrow of the difficulty selector.
-   */
-  var leftDifficultyArrow:FlxSprite;
-
-  /**
-   * The right arrow of the difficulty selector.
-   */
-  var rightDifficultyArrow:FlxSprite;
-
-  /**
-   * The text of the difficulty selector.
-   */
-  var difficultySprite:FlxSprite;
-
-  /**
-   * List of available level IDs.
-   */
-  var levelList:Array<String> = [];
-
-  var difficultySprites:Map<String, FlxSprite>;
-
-  var stickerSubState:StickerSubState;
-
-  static var rememberedLevelId:Null<String> = null;
-  static var rememberedDifficulty:Null<String> = Constants.DEFAULT_DIFFICULTY;
+  static var rememberedSelectedIndex:Int = 0;
 
   public function new(?stickers:StickerSubState = null)
   {
     super();
-
-    if (stickers?.members != null)
-    {
-      stickerSubState = stickers;
-    }
+    // overrideMusic = _overrideMusic;
   }
 
   override function create():Void
   {
-    super.create();
+    zakladka.loadGraphic(Paths.image('book/zakladka'));
+    zakladka_pico.loadGraphic(Paths.image('book/zakladka_pico'));
+    picoToggle = new FlxTypedButton<FlxSprite>(884, 50, togglePicoMix);
+    #if FEATURE_DISCORD_RPC
+    DiscordClient.instance.setPresence({state: "In the Menus", details: null});
+    #end
+    portraitView.loadGraphic(Paths.image("book/portr_a"));
 
-    levelList = LevelRegistry.instance.listSortedLevelIds();
-    levelList = levelList.filter(function(id) {
-      var levelData = LevelRegistry.instance.fetchEntry(id);
-      if (levelData == null) return false;
-
-      return levelData.isVisible();
-    });
-    if (levelList.length == 0) levelList = ['tutorial']; // Make sure there's at least one level to display.
-
-    difficultySprites = new Map<String, FlxSprite>();
+    FlxG.cameras.reset(new FunkinCamera('mainMenu'));
 
     transIn = FlxTransitionableState.defaultTransIn;
     transOut = FlxTransitionableState.defaultTransOut;
 
-    playMenuMusic();
+    if (!overrideMusic) playMenuMusic();
 
-    if (stickerSubState != null)
+    // We want the state to always be able to begin with being able to accept inputs and show the anims of the menu items.
+    persistentUpdate = true;
+    persistentDraw = true;
+
+    var bg:FlxSprite = new FlxSprite(Paths.image('book/title_screen'));
+    // bg.scrollFactor.x = 0;
+    // bg.scrollFactor.y = 0.17;
+    // bg.setGraphicSize(Std.int(bg.width * 1.2));
+    bg.updateHitbox();
+    bg.screenCenter();
+    add(bg);
+
+    camFollow = new FlxObject(0, 0, 1, 1);
+    add(camFollow);
+
+    magenta = new FlxSprite(Paths.image('menuBGMagenta'));
+    magenta.scrollFactor.x = bg.scrollFactor.x;
+    magenta.scrollFactor.y = bg.scrollFactor.y;
+    magenta.setGraphicSize(Std.int(bg.width));
+    magenta.updateHitbox();
+    magenta.x = bg.x;
+    magenta.y = bg.y;
+    magenta.visible = false;
+
+    // TODO: Why doesn't this line compile I'm going fucking feral
+
+    if (Preferences.flashingLights) add(magenta);
+
+    menuItems = new MenuTypedList<AtlasMenuItem>();
+    add(menuItems);
+    menuItems.onChange.add(onMenuItemChange);
+    menuItems.onAcceptPress.add(function(_) {
+      FlxFlicker.flicker(magenta, 1.1, 0.15, false, true);
+    });
+
+    menuItems.enabled = true; // can move on intro
+
+    // FlxG.camera.setScrollBounds(bg.x, bg.x + bg.width, bg.y, bg.y + bg.height * 1.2);
+
+    super.create();
+
+    // This has to come AFTER!
+    this.leftWatermarkText.text = Constants.VERSION;
+    // this.rightWatermarkText.text = "blablabla test";
+
+    // NG.core.calls.event.logEvent('swag').send();
+    var buttonHeights = 610 / 3;
+    characterButtons = [];
+    for (i in 0...characters.length)
     {
-      this.persistentUpdate = true;
-      this.persistentDraw = true;
-
-      openSubState(stickerSubState);
-      stickerSubState.degenStickers();
+      var characterButton = new FlxUIButton(200, 110 + i * buttonHeights, characters[i].name, function() onCharacterSelected(i));
+      characterButton.label.font = "Arial";
+      characterButton.label.size = 46;
+      characterButton.resize(360, 65);
+      // characterButton.height = buttonHeights;
+      // characterButton.width = buttonHeights;
+      // characterButton.label.fieldWidth *= 3;
+      // characterButton.scale.x = characterButton.scale.y = 3;
+      characterButton.updateHitbox();
+      // characterButton.icon = new FlxSprite(Paths.image('menuBG'));
+      add(characterButton);
+      characterButtons.push(characterButton);
     }
 
-    persistentUpdate = persistentDraw = true;
-
-    rememberSelection();
-
-    updateData();
-
-    // Explicitly define the background color.
-    this.bgColor = FlxColor.BLACK;
-
-    levelTitles = new FlxTypedGroup<LevelTitle>();
-    levelTitles.zIndex = 15;
-    add(levelTitles);
-
-    updateBackground();
-
-    var black:FunkinSprite = new FunkinSprite(levelBackground.x, 0).makeSolidColor(FlxG.width, Std.int(400 + levelBackground.y), FlxColor.BLACK);
-    black.zIndex = levelBackground.zIndex - 1;
-    add(black);
-
-    levelProps = new FlxTypedGroup<LevelProp>();
-    levelProps.zIndex = 1000;
-    add(levelProps);
-
-    updateProps();
-
-    tracklistText = new FlxText(FlxG.width * 0.05, levelBackground.x + levelBackground.height + 100, 0, "Tracks", 32);
-    tracklistText.setFormat('VCR OSD Mono', 32);
-    tracklistText.alignment = CENTER;
-    tracklistText.color = 0xFFE55777;
-    add(tracklistText);
-
-    scoreText = new FlxText(10, 10, 0, 'HIGH SCORE: 42069420');
-    scoreText.setFormat('VCR OSD Mono', 32);
-    scoreText.zIndex = 1000;
-    add(scoreText);
-
-    levelTitleText = new FlxText(FlxG.width * 0.7, 10, 0, 'LEVEL 1');
-    levelTitleText.setFormat('VCR OSD Mono', 32, FlxColor.WHITE, RIGHT);
-    levelTitleText.alpha = 0.7;
-    levelTitleText.zIndex = 1000;
-    add(levelTitleText);
-
-    buildLevelTitles();
-
-    leftDifficultyArrow = new FlxSprite(870, 480);
-    leftDifficultyArrow.frames = Paths.getSparrowAtlas('storymenu/ui/arrows');
-    leftDifficultyArrow.animation.addByPrefix('idle', 'leftIdle0');
-    leftDifficultyArrow.animation.addByPrefix('press', 'leftConfirm0');
-    leftDifficultyArrow.animation.play('idle');
-    add(leftDifficultyArrow);
-
-    buildDifficultySprite(Constants.DEFAULT_DIFFICULTY);
-    buildDifficultySprite();
-
-    rightDifficultyArrow = new FlxSprite(1245, leftDifficultyArrow.y);
-    rightDifficultyArrow.frames = leftDifficultyArrow.frames;
-    rightDifficultyArrow.animation.addByPrefix('idle', 'rightIdle0');
-    rightDifficultyArrow.animation.addByPrefix('press', 'rightConfirm0');
-    rightDifficultyArrow.animation.play('idle');
-    add(rightDifficultyArrow);
-
-    add(difficultySprite);
-
-    updateText();
-    changeDifficulty();
-    changeLevel();
-    refresh();
-
-    #if FEATURE_DISCORD_RPC
-    // Updating Discord Rich Presence
-    DiscordClient.instance.setPresence({state: 'In the Menus', details: null});
-    #end
+    player.loadGraphic(Paths.image('book/A'));
+    picoToggle.label = zakladka;
+    picoToggle.draw();
+    // add(player);
+    portraitView.x = 740;
+    portraitView.y = 160;
+    portraitView.scale.set(0.5, 0.5);
+    add(portraitView);
+    // Отображаем информацию о первом персонаже по умолчанию
+    updateCharacterInfo(0);
+    Cursor.show();
   }
 
-  function rememberSelection():Void
+  /**
+   * Обработчик события нажатия на кнопку выбора персонажа
+   */
+  private function onCharacterSelected(index:Int):Void
   {
-    if (rememberedLevelId != null)
+    if (index != -1)
     {
-      currentLevelId = rememberedLevelId;
+      updateCharacterInfo(index);
+      trace(index);
     }
-    if (rememberedDifficulty != null)
+  }
+
+  private function togglePicoMix()
+  {
+    picoToggleState = !picoToggleState;
+    if (picoToggleState)
     {
-      currentDifficultyId = rememberedDifficulty;
+      picoToggle.label = zakladka_pico;
     }
+    else
+    {
+      picoToggle.label = zakladka;
+    }
+  }
+
+  /**
+   * Обновление информации о выбранном персонаже
+   */
+  private function updateCharacterInfo(index:Int):Void
+  {
+    var characterData = characters[index];
+    var startX = screenSize[0] / 2;
+
+    // Обновляем имя персонажа
+    if (selectedCharacterName == null)
+    {
+      selectedCharacterName = new FlxText(startX, 145, startX - 10, characterData.name, 62);
+      selectedCharacterName.font = "Arial";
+      add(selectedCharacterName);
+    }
+    else
+    {
+      selectedCharacterName.text = characterData.name;
+    }
+    trace(characterData.description);
+    // Обновляем описание персонажа
+    if (selectedCharacterDescription == null)
+    {
+      selectedCharacterDescription = new FlxText(startX, 500, startX - 10, characterData.description, 42);
+      selectedCharacterDescription.font = "Arial";
+      add(selectedCharacterDescription);
+    }
+    else
+    {
+      portraitView.loadGraphic(Paths.image(characterData.portrait));
+      selectedCharacterDescription.text = characterData.description;
+    }
+
+    // Обновляем кнопку "Играть"
+    if (playButton == null)
+    {
+      playButton = new FlxUIButton(startX, 600, characterData.buttonLabel, onPlayClicked);
+      playButton.label.font = "Arial";
+      playButton.label.size = 46;
+      playButton.resize(360, 65);
+      add(playButton);
+      add(picoToggle);
+    }
+    else
+    {
+      playButton.label.text = characterData.buttonLabel;
+      levelId = characterData.levelId;
+    }
+  }
+
+  var busy:Bool;
+
+  /**
+   * Обработчик события нажатия на кнопку "Играть"
+   */
+  private function onPlayClicked():Void
+  {
+    // Здесь можно добавить логику перехода к игре с выбранным персонажем
+    trace("Играем за персонажа: " + selectedCharacterName.text);
+
+    busy = true;
+    // letterSort.inputEnabled = false;
+    var currentDifficulty:String = Constants.DEFAULT_DIFFICULTY;
+    var currentVariation:String = Constants.DEFAULT_VARIATION;
+    var targetInstId:String = null;
+    var cap =
+      {
+        freeplayData: {levelId: null}
+      };
+
+    PlayStatePlaylist.isStoryMode = true;
+
+    var pico:String = picoToggleState ? "-picomix" : "";
+    var targetSongId:String = levelId + pico; // cap?.freeplayData?.data.id ?? 'unknown';
+    var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId);
+    if (targetSongNullable == null)
+    {
+      trace('WARN: could not find song with id (${targetSongId})');
+      return;
+    }
+    var targetSong:Song = targetSongNullable;
+    var targetVariation:Null<String> = currentVariation;
+    var targetLevelId:Null<String> = cap?.freeplayData?.levelId;
+    PlayStatePlaylist.campaignId = targetLevelId ?? null;
+
+    var targetDifficulty:Null<SongDifficulty> = targetSong.getDifficulty(currentDifficulty, currentVariation);
+    if (targetDifficulty == null)
+    {
+      FlxG.log.warn('WARN: could not find difficulty with id (${currentDifficulty})');
+      return;
+    }
+
+    if (targetInstId == null)
+    {
+      var baseInstrumentalId:String = targetSong?.getBaseInstrumentalId(currentDifficulty, targetDifficulty.variation ?? Constants.DEFAULT_VARIATION) ?? '';
+      targetInstId = baseInstrumentalId;
+    }
+
+    // Visual and audio effects.
+    FunkinSound.playOnce(Paths.sound('confirmMenu'));
+    // if (dj != null) dj.confirm();
+
+    // grpCapsules.members[curSelected].forcePosition();
+    // grpCapsules.members[curSelected].confirm();
+
+    // backingCard?.confirm();
+
+    new FlxTimer().start(1, function(tmr:FlxTimer) {
+      FunkinSound.emptyPartialQueue();
+
+      Paths.setCurrentLevel(cap?.freeplayData?.levelId);
+      LoadingState.loadPlayState(
+        {
+          targetSong: targetSong,
+          targetDifficulty: currentDifficulty,
+          targetVariation: currentVariation,
+          targetInstrumental: targetInstId,
+          practiceMode: false,
+          minimalMode: false,
+          // isStoryMode: false,
+
+          #if FEATURE_DEBUG_FUNCTIONS
+          botPlayMode: FlxG.keys.pressed.SHIFT,
+          #else
+          botPlayMode: false,
+          #end
+          // TODO: Make these an option! It's currently only accessible via chart editor.
+          // startTimestamp: 0.0,
+          // playbackRate: 0.5,
+          // botPlayMode: true,
+        }, true);
+    });
   }
 
   function playMenuMusic():Void
@@ -248,417 +476,284 @@ class StoryMenuState extends MusicBeatState
       });
   }
 
-  function updateData():Void
+  function resetCamStuff(?snap:Bool = true):Void
   {
-    currentLevel = LevelRegistry.instance.fetchEntry(currentLevelId);
-    isLevelUnlocked = currentLevel == null ? false : currentLevel.isUnlocked();
+    // FlxG.camera.follow(camFollow, null, 0.06);
+
+    // if (snap) FlxG.camera.snapToTarget();
   }
 
-  function buildDifficultySprite(?diff:String):Void
+  function createMenuItem(name:String, atlas:String, callback:Void->Void, fireInstantly:Bool = false):Void
   {
-    if (diff == null) diff = currentDifficultyId;
-    remove(difficultySprite);
-    difficultySprite = difficultySprites.get(diff);
-    if (difficultySprite == null)
-    {
-      difficultySprite = new FlxSprite(leftDifficultyArrow.x + leftDifficultyArrow.width + 10, leftDifficultyArrow.y);
+    var item = new AtlasMenuItem(name, Paths.getSparrowAtlas(atlas), callback);
+    item.fireInstantly = fireInstantly;
+    item.ID = menuItems.length;
 
-      if (Assets.exists(Paths.file('images/storymenu/difficulties/${diff}.xml')))
+    item.scrollFactor.set();
+
+    // Set the offset of the item so the sprite is centered on the origin.
+    item.centered = true;
+    item.changeAnim('idle');
+
+    menuItems.addItem(name, item);
+  }
+
+  override function closeSubState():Void
+  {
+    magenta.visible = false;
+
+    super.closeSubState();
+  }
+
+  override function finishTransIn():Void
+  {
+    super.finishTransIn();
+
+    // menuItems.enabled = true;
+
+    // #if newgrounds
+    // if (NGio.savedSessionFailed)
+    // 	showSavedSessionFailed();
+    // #end
+  }
+
+  function onMenuItemChange(selected:MenuListItem)
+  {
+    // camFollow.setPosition(selected.getGraphicMidpoint().x, selected.getGraphicMidpoint().y);
+  }
+
+  #if FEATURE_OPEN_URL
+  function selectDonate()
+  {
+    WindowUtil.openURL(Constants.URL_ITCH);
+  }
+
+  function selectMerch()
+  {
+    WindowUtil.openURL(Constants.URL_MERCH);
+  }
+  #end
+
+  #if newgrounds
+  function selectLogin()
+  {
+    openNgPrompt(NgPrompt.showLogin());
+  }
+
+  function selectLogout()
+  {
+    openNgPrompt(NgPrompt.showLogout());
+  }
+
+  function showSavedSessionFailed()
+  {
+    openNgPrompt(NgPrompt.showSavedSessionFailed());
+  }
+
+  /**
+   * Calls openPrompt and redraws the login/logout button
+   * @param prompt
+   * @param onClose
+   */
+  public function openNgPrompt(prompt:Prompt, ?onClose:Void->Void)
+  {
+    var onPromptClose = checkLoginStatus;
+    if (onClose != null)
+    {
+      onPromptClose = function() {
+        checkLoginStatus();
+        onClose();
+      }
+    }
+
+    openPrompt(prompt, onPromptClose);
+  }
+
+  function checkLoginStatus()
+  {
+    var prevLoggedIn = menuItems.has("logout");
+    if (prevLoggedIn && !NGio.isLoggedIn) menuItems.resetItem("login", "logout", selectLogout);
+    else if (!prevLoggedIn && NGio.isLoggedIn) menuItems.resetItem("logout", "login", selectLogin);
+  }
+  #end
+
+  public function openPrompt(prompt:Prompt, onClose:Void->Void):Void
+  {
+    menuItems.enabled = false;
+    persistentUpdate = false;
+
+    prompt.closeCallback = function() {
+      menuItems.enabled = true;
+      if (onClose != null) onClose();
+    }
+
+    openSubState(prompt);
+  }
+
+  function startExitState(state:NextState):Void
+  {
+    menuItems.enabled = false; // disable for exit
+    rememberedSelectedIndex = menuItems.selectedIndex;
+
+    var duration = 0.4;
+    menuItems.forEach(function(item) {
+      if (menuItems.selectedIndex != item.ID)
       {
-        difficultySprite.frames = Paths.getSparrowAtlas('storymenu/difficulties/${diff}');
-        difficultySprite.animation.addByPrefix('idle', 'idle0', 24, true);
-        if (Preferences.flashingLights) difficultySprite.animation.play('idle');
+        FlxTween.tween(item, {alpha: 0}, duration, {ease: FlxEase.quadOut});
       }
       else
       {
-        difficultySprite.loadGraphic(Paths.image('storymenu/difficulties/${diff}'));
+        item.visible = false;
       }
+    });
 
-      difficultySprites.set(diff, difficultySprite);
-
-      difficultySprite.x += (difficultySprites.get(Constants.DEFAULT_DIFFICULTY).width - difficultySprite.width) / 2;
-    }
-    difficultySprite.alpha = 0;
-
-    difficultySprite.y = leftDifficultyArrow.y - 15;
-    var targetY:Float = leftDifficultyArrow.y + 10;
-    targetY -= (difficultySprite.height - difficultySprites.get(Constants.DEFAULT_DIFFICULTY).height) / 2;
-    FlxTween.tween(difficultySprite, {y: targetY, alpha: 1}, 0.07);
-
-    add(difficultySprite);
-  }
-
-  function buildLevelTitles():Void
-  {
-    levelTitles.clear();
-
-    for (levelIndex in 0...levelList.length)
-    {
-      var levelId:String = levelList[levelIndex];
-      var level:Level = LevelRegistry.instance.fetchEntry(levelId);
-      if (level == null || !level.isVisible()) continue;
-
-      // TODO: Readd lock icon if unlocked is false.
-
-      var levelTitleItem:LevelTitle = new LevelTitle(0, Std.int(levelBackground.y + levelBackground.height + 10), level);
-      levelTitleItem.targetY = ((levelTitleItem.height + 20) * levelIndex);
-      levelTitleItem.screenCenter(X);
-      levelTitles.add(levelTitleItem);
-    }
+    new FlxTimer().start(duration, function(_) FlxG.switchState(state));
   }
 
   override function update(elapsed:Float):Void
   {
+    super.update(elapsed);
+
+    if (FlxG.onMobile)
+    {
+      var touch:FlxTouch = FlxG.touches.getFirst();
+
+      if (touch != null)
+      {
+        for (item in menuItems)
+        {
+          if (touch.overlaps(item))
+          {
+            if (menuItems.selectedIndex == item.ID && touch.justPressed) menuItems.accept();
+            else
+              menuItems.selectItem(item.ID);
+          }
+        }
+      }
+    }
+
     Conductor.instance.update();
 
-    highScoreLerp = Std.int(MathUtil.smoothLerp(highScoreLerp, highScore, elapsed, 0.25));
-
-    scoreText.text = 'LEVEL SCORE: ${Math.round(highScoreLerp)}';
-
-    levelTitleText.text = currentLevel.getTitle();
-    levelTitleText.x = FlxG.width - (levelTitleText.width + 10); // Right align.
-
-    handleKeyPresses();
-
-    super.update(elapsed);
-  }
-
-  function handleKeyPresses():Void
-  {
-    if (!exitingMenu)
+    // Open the debug menu, defaults to ` / ~
+    // This includes stuff like the Chart Editor, so it should be present on all builds.
+    if (controls.DEBUG_MENU)
     {
-      if (!selectedLevel)
-      {
-        if (controls.UI_UP_P)
-        {
-          changeLevel(-1);
-          changeDifficulty(0);
-        }
+      persistentUpdate = false;
 
-        if (controls.UI_DOWN_P)
-        {
-          changeLevel(1);
-          changeDifficulty(0);
-        }
-
-        #if !html5
-        if (FlxG.mouse.wheel != 0)
-        {
-          changeLevel(-Math.round(FlxG.mouse.wheel));
-        }
-        #else
-        if (FlxG.mouse.wheel < 0)
-        {
-          changeLevel(-Math.round(FlxG.mouse.wheel / 8));
-        }
-        else if (FlxG.mouse.wheel > 0)
-        {
-          changeLevel(-Math.round(FlxG.mouse.wheel / 8));
-        }
-        #end
-
-        // TODO: Querying UI_RIGHT_P (justPressed) after UI_RIGHT always returns false. Fix it!
-        if (controls.UI_RIGHT_P)
-        {
-          changeDifficulty(1);
-        }
-
-        if (controls.UI_LEFT_P)
-        {
-          changeDifficulty(-1);
-        }
-
-        if (controls.UI_RIGHT)
-        {
-          rightDifficultyArrow.animation.play('press');
-        }
-        else
-        {
-          rightDifficultyArrow.animation.play('idle');
-        }
-
-        if (controls.UI_LEFT)
-        {
-          leftDifficultyArrow.animation.play('press');
-        }
-        else
-        {
-          leftDifficultyArrow.animation.play('idle');
-        }
-      }
-
-      if (controls.ACCEPT)
-      {
-        selectLevel();
-      }
+      FlxG.state.openSubState(new DebugMenuSubState());
     }
 
-    if (controls.BACK && !exitingMenu && !selectedLevel)
+    #if FEATURE_DEBUG_FUNCTIONS
+    // Ctrl+Alt+Shift+P = Character Unlock screen
+    // Ctrl+Alt+Shift+W = Meet requirements for Pico Unlock
+    // Ctrl+Alt+Shift+M = Revoke requirements for Pico Unlock
+    // Ctrl+Alt+Shift+R = Score/Rank conflict test
+    // Ctrl+Alt+Shift+N = Mark all characters as not seen
+    // Ctrl+Alt+Shift+E = Dump save data
+    // Ctrl+Alt+Shift+L = Force crash and create a log dump
+
+    if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.ALT && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.P)
     {
-      exitingMenu = true;
-      FlxG.switchState(() -> new MainMenuState());
-      FunkinSound.playOnce(Paths.sound('cancelMenu'));
-    }
-  }
-
-  /**
-   * Changes the selected level.
-   * @param change +1 (down), -1 (up)
-   */
-  function changeLevel(change:Int = 0):Void
-  {
-    var currentIndex:Int = levelList.indexOf(currentLevelId);
-    var prevIndex:Int = currentIndex;
-
-    currentIndex += change;
-
-    // Wrap around
-    if (currentIndex < 0) currentIndex = levelList.length - 1;
-    if (currentIndex >= levelList.length) currentIndex = 0;
-
-    var previousLevelId:String = currentLevelId;
-    currentLevelId = levelList[currentIndex];
-    rememberedLevelId = currentLevelId;
-
-    updateData();
-
-    for (index in 0...levelTitles.members.length)
-    {
-      var item:LevelTitle = levelTitles.members[index];
-
-      item.targetY = (index - currentIndex) * 125 + 480;
-
-      if (index == currentIndex)
-      {
-        currentLevelTitle = item;
-        item.alpha = 1.0;
-      }
-      else
-      {
-        item.alpha = 0.6;
-      }
+      FlxG.switchState(() -> new funkin.ui.charSelect.CharacterUnlockState('pico'));
     }
 
-    if (currentIndex != prevIndex) FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
-
-    updateText();
-    updateBackground(previousLevelId);
-    updateProps();
-    refresh();
-  }
-
-  /**
-   * Changes the selected difficulty.
-   * @param change +1 (right) to increase difficulty, -1 (left) to decrease difficulty
-   */
-  function changeDifficulty(change:Int = 0):Void
-  {
-    // "For now, NO erect in story mode" -Dave
-
-    var difficultyList:Array<String> = Constants.DEFAULT_DIFFICULTY_LIST;
-    // Use this line to displays all difficulties
-    // var difficultyList:Array<String> = currentLevel.getDifficulties();
-    var currentIndex:Int = difficultyList.indexOf(currentDifficultyId);
-
-    currentIndex += change;
-
-    // Wrap around
-    if (currentIndex < 0) currentIndex = difficultyList.length - 1;
-    if (currentIndex >= difficultyList.length) currentIndex = 0;
-
-    var hasChanged:Bool = currentDifficultyId != difficultyList[currentIndex];
-    currentDifficultyId = difficultyList[currentIndex];
-    rememberedDifficulty = currentDifficultyId;
-
-    if (difficultyList.length <= 1)
+    if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.ALT && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.W)
     {
-      leftDifficultyArrow.visible = false;
-      rightDifficultyArrow.visible = false;
-    }
-    else
-    {
-      leftDifficultyArrow.visible = true;
-      rightDifficultyArrow.visible = true;
-    }
-
-    if (hasChanged)
-    {
-      buildDifficultySprite();
-      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
-      // Disable the funny music thing for now.
-      // funnyMusicThing();
-    }
-
-    updateText();
-    refresh();
-  }
-
-  final FADE_OUT_TIME:Float = 1.5;
-
-  function funnyMusicThing():Void
-  {
-    if (currentDifficultyId == "nightmare")
-    {
-      FlxG.sound.music.fadeOut(FADE_OUT_TIME, 0.0);
-    }
-    else
-    {
-      FlxG.sound.music.fadeOut(FADE_OUT_TIME, 1.0);
-    }
-  }
-
-  public override function dispatchEvent(event:ScriptEvent):Void
-  {
-    // super.dispatchEvent(event) dispatches event to module scripts.
-    super.dispatchEvent(event);
-
-    if (levelProps?.members != null && levelProps.members.length > 0)
-    {
-      // Dispatch event to props.
-      for (prop in levelProps.members)
-      {
-        ScriptEventDispatcher.callEvent(prop, event);
-      }
-    }
-  }
-
-  function selectLevel():Void
-  {
-    if (!currentLevel.isUnlocked())
-    {
-      FunkinSound.playOnce(Paths.sound('cancelMenu'));
-      return;
-    }
-
-    if (selectedLevel) return;
-
-    selectedLevel = true;
-
-    FunkinSound.playOnce(Paths.sound('confirmMenu'));
-
-    currentLevelTitle.isFlashing = true;
-
-    for (prop in levelProps.members)
-    {
-      prop.playConfirm();
-    }
-
-    Paths.setCurrentLevel(currentLevel.id);
-
-    PlayStatePlaylist.playlistSongIds = currentLevel.getSongs();
-    PlayStatePlaylist.isStoryMode = true;
-    PlayStatePlaylist.campaignScore = 0;
-
-    var targetSongId:String = PlayStatePlaylist.playlistSongIds.shift();
-
-    var targetSong:Song = SongRegistry.instance.fetchEntry(targetSongId);
-
-    PlayStatePlaylist.campaignId = currentLevel.id;
-    PlayStatePlaylist.campaignTitle = currentLevel.getTitle();
-    PlayStatePlaylist.campaignDifficulty = currentDifficultyId;
-
-    Highscore.talliesLevel = new funkin.Highscore.Tallies();
-
-    new FlxTimer().start(1, function(tmr:FlxTimer) {
-      FlxTransitionableState.skipNextTransIn = false;
-      FlxTransitionableState.skipNextTransOut = false;
-
-      var targetVariation:String = targetSong.getFirstValidVariation(PlayStatePlaylist.campaignDifficulty);
-
-      LoadingState.loadPlayState(
+      FunkinSound.playOnce(Paths.sound('confirmMenu'));
+      // Give the user a score of 1 point on Weekend 1 story mode (Easy difficulty).
+      // This makes the level count as cleared and displays the songs in Freeplay.
+      funkin.save.Save.instance.setLevelScore('weekend1', 'easy',
         {
-          targetSong: targetSong,
-          targetDifficulty: PlayStatePlaylist.campaignDifficulty,
-          targetVariation: targetVariation
-        }, true);
-    });
-  }
-
-  function updateBackground(?previousLevelId:String = ''):Void
-  {
-    if (levelBackground == null || previousLevelId == '')
-    {
-      // Build a new background and display it immediately.
-      levelBackground = currentLevel.buildBackground();
-      levelBackground.x = 0;
-      levelBackground.y = 56;
-      levelBackground.zIndex = 100;
-      levelBackground.alpha = 1.0; // Not hidden.
-      add(levelBackground);
-    }
-    else
-    {
-      var previousLevel = LevelRegistry.instance.fetchEntry(previousLevelId);
-
-      if (currentLevel.isBackgroundSimple() && previousLevel.isBackgroundSimple())
-      {
-        var previousColor:FlxColor = previousLevel.getBackgroundColor();
-        var currentColor:FlxColor = currentLevel.getBackgroundColor();
-        if (previousColor != currentColor)
-        {
-          // Both the previous and current level were simple backgrounds.
-          // Fade between colors directly, rather than fading one background out and another in.
-          // cancels potential tween in progress, and tweens from there
-          FlxTween.cancelTweensOf(levelBackground);
-          FlxTween.color(levelBackground, 0.9, levelBackground.color, currentColor, {ease: FlxEase.quartOut});
-        }
-        else
-        {
-          // Do no fade at all if the colors aren't different.
-        }
-      }
-      else
-      {
-        // Either the previous or current level has a complex background.
-        // We need to fade the old background out and the new one in.
-
-        // Reference the old background and fade it out.
-        var oldBackground:FlxSprite = levelBackground;
-        FlxTween.tween(oldBackground, {alpha: 0.0}, 0.6,
-          {
-            ease: FlxEase.linear,
-            onComplete: function(_) {
-              remove(oldBackground);
+          score: 1,
+          tallies:
+            {
+              sick: 0,
+              good: 0,
+              bad: 0,
+              shit: 0,
+              missed: 0,
+              combo: 0,
+              maxCombo: 0,
+              totalNotesHit: 0,
+              totalNotes: 0,
             }
-          });
+        });
+    }
 
-        // Build a new background and fade it in.
-        levelBackground = currentLevel.buildBackground();
-        levelBackground.x = 0;
-        levelBackground.y = 56;
-        levelBackground.alpha = 0.0; // Hidden to start.
-        levelBackground.zIndex = 100;
-        add(levelBackground);
-
-        FlxTween.tween(levelBackground, {alpha: 1.0}, 0.6,
+    if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.ALT && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.M)
+    {
+      FunkinSound.playOnce(Paths.sound('confirmMenu'));
+      // Give the user a score of 0 points on Weekend 1 story mode (all difficulties).
+      // This makes the level count as uncleared and no longer displays the songs in Freeplay.
+      for (diff in ['easy', 'normal', 'hard'])
+      {
+        funkin.save.Save.instance.setLevelScore('weekend1', diff,
           {
-            ease: FlxEase.linear
+            score: 0,
+            tallies:
+              {
+                sick: 0,
+                good: 0,
+                bad: 0,
+                shit: 0,
+                missed: 0,
+                combo: 0,
+                maxCombo: 0,
+                totalNotesHit: 0,
+                totalNotes: 0,
+              }
           });
       }
     }
-  }
 
-  function updateProps():Void
-  {
-    for (ind => prop in currentLevel.buildProps(levelProps.members))
+    if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.ALT && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.R)
     {
-      prop.zIndex = 1000;
-      if (levelProps.members[ind] != prop) levelProps.replace(levelProps.members[ind], prop) ?? levelProps.add(prop);
+      // Give the user a hypothetical overridden score,
+      // and see if we can maintain that golden P rank.
+      funkin.save.Save.instance.setSongScore('tutorial', 'easy',
+        {
+          score: 1234567,
+          tallies:
+            {
+              sick: 0,
+              good: 0,
+              bad: 0,
+              shit: 1,
+              missed: 0,
+              combo: 0,
+              maxCombo: 0,
+              totalNotesHit: 1,
+              totalNotes: 10,
+            }
+        });
     }
 
-    refresh();
-  }
+    if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.ALT && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.N)
+    {
+      @:privateAccess
+      {
+        funkin.save.Save.instance.data.unlocks.charactersSeen = ["bf"];
+        funkin.save.Save.instance.data.unlocks.oldChar = false;
+      }
+    }
 
-  function updateText():Void
-  {
-    tracklistText.text = 'TRACKS\n\n';
-    tracklistText.text += currentLevel.getSongDisplayNames(currentDifficultyId).join('\n');
+    if (FlxG.keys.pressed.CONTROL && FlxG.keys.pressed.ALT && FlxG.keys.pressed.SHIFT && FlxG.keys.justPressed.E)
+    {
+      funkin.save.Save.instance.debug_dumpSave();
+    }
+    #end
 
-    tracklistText.screenCenter(X);
-    tracklistText.x -= FlxG.width * 0.35;
+    if (FlxG.sound.music != null && FlxG.sound.music.volume < 0.8)
+    {
+      FlxG.sound.music.volume += 0.5 * elapsed;
+    }
 
-    var levelScore:Null<SaveScoreData> = Save.instance.getLevelScore(currentLevelId, currentDifficultyId);
-    highScore = levelScore?.score ?? 0;
-    // levelScore.accuracy
+    if (_exiting) menuItems.enabled = false;
+
+    if (controls.BACK && menuItems.enabled && !menuItems.busy)
+    {
+      FlxG.switchState(() -> new TitleState());
+      FunkinSound.playOnce(Paths.sound('cancelMenu'));
+    }
   }
 }

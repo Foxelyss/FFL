@@ -133,9 +133,24 @@ class BookState extends MusicBeatState
   var magenta:FlxSprite;
   var camFollow:FlxObject;
   var characters = [
-    {name: "Librarian", description: "Описание персонажа А", buttonLabel: "Играть за А"},
-    {name: "Gunslinger", description: "Описание персонажа B", buttonLabel: "Играть за B"},
-    {name: "Halfway kek", description: "Описание персонажа C", buttonLabel: "Играть за C"}
+    {
+      name: "Librarian",
+      description: "Описание персонажа А",
+      buttonLabel: "Биться против А",
+      levelId: "bookfox"
+    },
+    {
+      name: "Gunslinger",
+      description: "Описание персонажа B",
+      buttonLabel: "Биться против B",
+      levelId: "gunslinger"
+    },
+    {
+      name: "Halfway kek",
+      description: "Описание персонажа C",
+      buttonLabel: "Биться против C",
+      levelId: "halfway-dead"
+    }
   ];
 
   // Кнопки выбора персонажей
@@ -144,10 +159,17 @@ class BookState extends MusicBeatState
   // Элементы для отображения информации о выбранном персонаже
   var selectedCharacterName:FlxText;
   var selectedCharacterDescription:FlxText;
-  var playButton:FlxButton;
+  var playButton:FlxUIButton;
 
   var screenSize = [1280, 720];
   var overrideMusic:Bool = false;
+  var levelId:String = "bookfox";
+  var player = new FlxSprite();
+  var picoToggle:FlxTypedButton<FlxSprite>;
+  var picoToggleState = false;
+
+  var zakladka = new FlxSprite();
+  var zakladka_pico = new FlxSprite();
 
   static var rememberedSelectedIndex:Int = 0;
 
@@ -159,6 +181,9 @@ class BookState extends MusicBeatState
 
   override function create():Void
   {
+    zakladka.loadGraphic(Paths.image('book/zakladka'));
+    zakladka_pico.loadGraphic(Paths.image('book/zakladka_pico'));
+    picoToggle = new FlxTypedButton<FlxSprite>(884, 50, togglePicoMix);
     #if FEATURE_DISCORD_RPC
     DiscordClient.instance.setPresence({state: "In the Menus", details: null});
     #end
@@ -175,9 +200,9 @@ class BookState extends MusicBeatState
     persistentDraw = true;
 
     var bg:FlxSprite = new FlxSprite(Paths.image('book/title_screen'));
-    bg.scrollFactor.x = 0;
-    bg.scrollFactor.y = 0.17;
-    bg.setGraphicSize(Std.int(bg.width * 1.2));
+    // bg.scrollFactor.x = 0;
+    // bg.scrollFactor.y = 0.17;
+    // bg.setGraphicSize(Std.int(bg.width * 1.2));
     bg.updateHitbox();
     bg.screenCenter();
     add(bg);
@@ -220,9 +245,10 @@ class BookState extends MusicBeatState
     characterButtons = [];
     for (i in 0...characters.length)
     {
-      var characterButton = new FlxUIButton(100, 10 + i * buttonHeights, characters[i].name, function() onCharacterSelected(i));
+      var characterButton = new FlxUIButton(200, 60 + i * buttonHeights, characters[i].name, function() onCharacterSelected(i));
       characterButton.label.font = "Arial";
       characterButton.label.size = 46;
+      characterButton.resize(360, 65);
       // characterButton.height = buttonHeights;
       // characterButton.width = buttonHeights;
       // characterButton.label.fieldWidth *= 3;
@@ -233,6 +259,11 @@ class BookState extends MusicBeatState
       characterButtons.push(characterButton);
     }
 
+    player.loadGraphic(Paths.image('book/A'));
+    picoToggle.label = zakladka;
+    picoToggle.draw();
+    add(player);
+    add(picoToggle);
     // Отображаем информацию о первом персонаже по умолчанию
     updateCharacterInfo(0);
     Cursor.show();
@@ -247,6 +278,19 @@ class BookState extends MusicBeatState
     {
       updateCharacterInfo(index);
       trace(index);
+    }
+  }
+
+  private function togglePicoMix()
+  {
+    picoToggleState = !picoToggleState;
+    if (picoToggleState)
+    {
+      picoToggle.label = zakladka_pico;
+    }
+    else
+    {
+      picoToggle.label = zakladka;
     }
   }
 
@@ -273,7 +317,7 @@ class BookState extends MusicBeatState
     // Обновляем описание персонажа
     if (selectedCharacterDescription == null)
     {
-      selectedCharacterDescription = new FlxText(startX, 60, startX - 10, characterData.description, 42);
+      selectedCharacterDescription = new FlxText(startX, 500, startX - 10, characterData.description, 42);
       selectedCharacterDescription.font = "Arial";
       add(selectedCharacterDescription);
     }
@@ -285,13 +329,16 @@ class BookState extends MusicBeatState
     // Обновляем кнопку "Играть"
     if (playButton == null)
     {
-      playButton = new FlxButton(startX, 120, characterData.buttonLabel, onPlayClicked);
+      playButton = new FlxUIButton(startX, 680, characterData.buttonLabel, onPlayClicked);
       playButton.label.font = "Arial";
+      playButton.label.size = 46;
+      playButton.resize(360, 65);
       add(playButton);
     }
     else
     {
       playButton.label.text = characterData.buttonLabel;
+      levelId = characterData.levelId;
     }
   }
 
@@ -315,9 +362,10 @@ class BookState extends MusicBeatState
         freeplayData: {levelId: null}
       };
 
-    PlayStatePlaylist.isStoryMode = false;
+    PlayStatePlaylist.isStoryMode = true;
 
-    var targetSongId:String = 'bookfox'; // cap?.freeplayData?.data.id ?? 'unknown';
+    var pico:String = picoToggleState ? "-picomix" : "";
+    var targetSongId:String = levelId + pico; // cap?.freeplayData?.data.id ?? 'unknown';
     var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId);
     if (targetSongNullable == null)
     {
@@ -363,6 +411,7 @@ class BookState extends MusicBeatState
           targetInstrumental: targetInstId,
           practiceMode: false,
           minimalMode: false,
+          // isStoryMode: false,
 
           #if FEATURE_DEBUG_FUNCTIONS
           botPlayMode: FlxG.keys.pressed.SHIFT,
