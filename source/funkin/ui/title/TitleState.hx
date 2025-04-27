@@ -1,5 +1,6 @@
 package funkin.ui.title;
 
+import funkin.ui.story.StoryMenuState;
 import flixel.FlxSprite;
 import flixel.FlxState;
 import flixel.group.FlxGroup;
@@ -114,9 +115,7 @@ class TitleState extends MusicBeatState
   var logoBl:FlxSprite;
   var outlineShaderShit:TitleOutline;
 
-  var gfDance:FlxSpriteOverlay;
   var danceLeft:Bool = false;
-  var titleText:FlxSprite;
   var maskShader = new LeftMaskShader();
 
   function startIntro():Void
@@ -129,42 +128,24 @@ class TitleState extends MusicBeatState
     bg.screenCenter();
     add(bg);
 
-    logoBl = new FlxSprite(-150, -100);
+    var backgrd:FlxSprite = new FlxSprite(0, 0, Paths.image('book/start_screen_no_logo'));
+    backgrd.screenCenter();
+    add(backgrd);
+
+    logoBl = new FlxSprite(670, 200);
     logoBl.frames = Paths.getSparrowAtlas('logoBumpin');
-    logoBl.animation.addByPrefix('bump', 'logo bumpin', 24);
+    logoBl.animation.addByPrefix('bump', 'bumpin', 2);
+    logoBl.animation.addByPrefix('press', 'bumpin', 24);
     logoBl.animation.play('bump');
     logoBl.shader = swagShader.shader;
+    logoBl.scale.set(0.7, 0.7);
     logoBl.updateHitbox();
 
     outlineShaderShit = new TitleOutline();
 
-    gfDance = new FlxSpriteOverlay(FlxG.width * 0.4, FlxG.height * 0.07);
-    gfDance.frames = Paths.getSparrowAtlas('gfDanceTitle');
-    gfDance.animation.addByIndices('danceLeft', 'gfDance', [30, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14], "", 24, false);
-    gfDance.animation.addByIndices('danceRight', 'gfDance', [15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29], "", 24, false);
-
-    // maskShader.swagSprX = gfDance.x;
-    // maskShader.swagMaskX = gfDance.x + 200;
-    // maskShader.frameUV = gfDance.frame.uv;
-    // gfDance.shader = maskShader;
-
-    gfDance.shader = swagShader.shader;
-
     // gfDance.shader = new TitleOutline();
 
     add(logoBl);
-
-    add(gfDance);
-
-    titleText = new FlxSprite(100, FlxG.height * 0.8);
-    titleText.frames = Paths.getSparrowAtlas('titleEnter');
-    titleText.animation.addByPrefix('idle', "Press Enter to Begin", 24);
-    titleText.animation.addByPrefix('press', "ENTER PRESSED", 24);
-    titleText.animation.play('idle');
-    titleText.updateHitbox();
-    titleText.shader = swagShader.shader;
-    // titleText.screenCenter(X);
-    add(titleText);
 
     if (!initialized) // Fix an issue where returning to the credits would play a black screen.
     {
@@ -277,15 +258,6 @@ class TitleState extends MusicBeatState
 
     Conductor.instance.update();
 
-    /* if (FlxG.onMobile)
-          {
-      if (gfDance != null)
-      {
-        gfDance.x = (FlxG.width / 2) + (FlxG.accelerometer.x * (FlxG.width / 2));
-        // gfDance.y = (FlxG.height / 2) + (FlxG.accelerometer.y * (FlxG.height / 2));
-      }
-          }
-     */
     if (FlxG.keys.justPressed.I)
     {
       FlxTween.tween(outlineShaderShit, {funnyX: 50, funnyY: 50}, 0.6, {ease: FlxEase.quartOut});
@@ -318,7 +290,7 @@ class TitleState extends MusicBeatState
     // If you spam Enter, we should skip the transition.
     if (pressedEnter && transitioning && skippedIntro)
     {
-      FlxG.switchState(() -> new MainMenuState());
+      FlxG.switchState(() -> new StoryMenuState());
     }
 
     if (pressedEnter && !transitioning && skippedIntro)
@@ -328,12 +300,12 @@ class TitleState extends MusicBeatState
       NGio.unlockMedal(60960);
       // If it's Friday according to da clock
       if (Date.now().getDay() == 5) NGio.unlockMedal(61034);
-      titleText.animation.play('press');
+      logoBl.animation.play('press');
       FlxG.camera.flash(FlxColor.WHITE, 1);
       FunkinSound.playOnce(Paths.sound('confirmMenu'), 0.7);
       transitioning = true;
 
-      var targetState:NextState = () -> new MainMenuState();
+      var targetState:NextState = () -> new StoryMenuState();
 
       new FlxTimer().start(2, function(tmr:FlxTimer) {
         // These assets are very unlikely to be used for the rest of gameplay, so it unloads them from cache/memory
@@ -465,13 +437,13 @@ class TitleState extends MusicBeatState
           switch (i + 1)
           {
             case 1:
-              createCoolText(['The', 'Funkin Crew Inc']);
+              createCoolText(['Stealed from The', 'Funkin Crew Inc']);
             case 3:
               addMoreText('presents');
             case 4:
               deleteCoolText();
             case 5:
-              createCoolText(['In association', 'with']);
+              createCoolText(['In ASSociation', 'with']);
             case 7:
               addMoreText('newgrounds');
               if (ngSpr != null) ngSpr.visible = true;
@@ -485,16 +457,16 @@ class TitleState extends MusicBeatState
             case 12:
               deleteCoolText();
             case 13:
-              addMoreText('Friday');
+              addMoreText('FNF');
             case 14:
               // easter egg for when the game is trending with the wrong spelling
               // the random intro text would be "trending--only on x"
 
               if (curWacky[0] == "trending") addMoreText('Nigth');
               else
-                addMoreText('Night');
+                addMoreText('Based');
             case 15:
-              addMoreText('Funkin');
+              addMoreText('Bullshit');
             case 16:
               skipIntro();
           }
@@ -509,13 +481,6 @@ class TitleState extends MusicBeatState
       if (logoBl != null && logoBl.animation != null) logoBl.animation.play('bump', true);
 
       danceLeft = !danceLeft;
-
-      if (gfDance != null && gfDance.animation != null)
-      {
-        if (danceLeft) gfDance.animation.play('danceRight');
-        else
-          gfDance.animation.play('danceLeft');
-      }
     }
 
     return true;

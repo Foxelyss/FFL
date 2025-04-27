@@ -23,7 +23,6 @@ import flixel.util.FlxTimer;
 import funkin.ui.AtlasMenuList;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.MenuList;
-import funkin.ui.book.BookState;
 import funkin.ui.title.TitleState;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.Prompt;
@@ -123,24 +122,12 @@ class MainMenuState extends MusicBeatState
         }));
     });
 
-    #if FEATURE_OPEN_URL
-    // In order to prevent popup blockers from triggering,
-    // we need to open the link as an immediate result of a keypress event,
-    // so we can't wait for the flicker animation to complete.
-    var hasPopupBlocker = #if web true #else false #end;
-    createMenuItem('merch', 'mainmenu/merch', selectMerch, hasPopupBlocker);
-    #end
-
     createMenuItem('options', 'mainmenu/options', function() {
       startExitState(() -> new funkin.ui.options.OptionsState());
     });
 
     createMenuItem('credits', 'mainmenu/credits', function() {
       startExitState(() -> new funkin.ui.credits.CreditsState());
-    });
-
-    createMenuItem('asd', 'mainmenu/credits', function() {
-      startExitState(() -> new funkin.ui.book.BookState());
     });
 
     // Reset position of menu items.

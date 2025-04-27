@@ -2366,7 +2366,8 @@ class PlayState extends MusicBeatSubState
       {
         // Call an event to allow canceling the note miss.
         // NOTE: This is what handles the character animations!
-        var event:NoteScriptEvent = new NoteScriptEvent(NOTE_MISS, note, -Constants.HEALTH_MISS_PENALTY, 0, true);
+        var health_amount = -Constants.HEALTH_MISS_PENALTY;
+        var event:NoteScriptEvent = new NoteScriptEvent(NOTE_MISS, note, health_amount, 0, true);
         dispatchEvent(event);
 
         // Calling event.cancelEvent() skips all the other logic! Neat!
@@ -3276,7 +3277,8 @@ class PlayState extends MusicBeatSubState
     camHUD.alpha = 1;
 
     var talliesToUse:Tallies = PlayStatePlaylist.isStoryMode ? Highscore.talliesLevel : Highscore.tallies;
-
+    FlxG.switchState(() -> new StoryMenuState());
+    return;
     var res:ResultState = new ResultState(
       {
         storyMode: PlayStatePlaylist.isStoryMode,

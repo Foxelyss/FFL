@@ -92,10 +92,7 @@ class StageRegistry extends BaseRegistry<Stage, StageData>
    */
   public function listBaseGameStageIds():Array<String>
   {
-    return [
-      "mainStage", "mainStageErect", "spookyMansion", "phillyTrain", "phillyTrainErect", "limoRide", "limoRideErect", "mallXmas", "mallXmasErect", "mallEvil",
-      "school", "schoolEvil", "tankmanBattlefield", "phillyStreets", "phillyStreetsErect", "phillyBlazin",
-    ];
+    return ["mainStage", "mainStageErect", "spookyMansion", "saloon", "basement", "library"];
   }
 
   /**

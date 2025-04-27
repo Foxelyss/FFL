@@ -96,6 +96,7 @@ class LevelRegistry extends BaseRegistry<Level, LevelData>
     return [
       "tutorial",
       "week1",
+      "weekweird",
       "week2",
       "week3",
       "week4",

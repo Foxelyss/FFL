@@ -1,5 +1,8 @@
 package funkin.ui.story;
 
+import flixel.graphics.FlxGraphic;
+import flixel.system.FlxAssets.FlxGraphicAsset;
+import funkin.ui.title.AttractState;
 import flixel.addons.transition.FlxTransitionableState;
 import flixel.FlxSprite;
 import flixel.group.FlxGroup.FlxTypedGroup;
@@ -50,7 +53,6 @@ import flixel.util.FlxTimer;
 import funkin.ui.AtlasMenuList;
 import funkin.ui.freeplay.FreeplayState;
 import funkin.ui.MenuList;
-import funkin.ui.book.BookState;
 import funkin.ui.title.TitleState;
 import funkin.ui.story.StoryMenuState;
 import funkin.ui.Prompt;
@@ -62,6 +64,7 @@ import flixel.FlxObject;
 import flixel.FlxG;
 import flixel.addons.ui.FlxUIButton;
 import flixel.addons.ui.FlxUISpriteButton;
+import flixel.addons.ui.FlxUITypedButton;
 import flixel.FlxSprite;
 import flixel.FlxState;
 import flixel.addons.transition.FlxTransitionableState;
@@ -163,22 +166,22 @@ class StoryMenuState extends MusicBeatState
   var characters = [
     {
       name: "BookFox",
-      description: "Описание персонажа А",
-      buttonLabel: "Биться против",
+      description: "Фир — жизнерадостный фенек не большого роста, чья цель спасти свою родную вселенную. Для выполнения данной задачи он использует свои способности в которые входят возращение времени вспять и место, что лежит между мирами. Это место зовётся Библиотекой. Этот мир хранит информацию о всех существах когда-либо существовавших существах.",
+      buttonLabel: "Fight!",
       portrait: "book/portr_a",
       levelId: "bookfox"
     },
     {
       name: "Gunslinger",
-      description: "Описание персонажа B",
-      buttonLabel: "Биться против",
+      description: "Линдо — хитрый фенек, не большого роста. Он является преступником с благими намерениями. Он как Робин Гуд, ворует у богатых и отдает бедным. Его мир это смесь фэнтэзи, как в D&D, и времён дикого запада.",
+      buttonLabel: "Fight!",
       portrait: "book/portr_b",
       levelId: "gunslinger"
     },
     {
-      name: "Halfway kek",
-      description: "Описание персонажа C",
-      buttonLabel: "Биться против",
+      name: "Halfway-Dead",
+      description: "И вновь фенек небольшого роста. Он является Фиром из другой вселенной, что была обречена на гибель. Фиер умер, но благодаря Библиотеке остался жив. В его задачи, как работника Библиотеки, входит расстановка книг мертвых существ и уход за душами, что умерли в библиотеке. Его имя правильно читается как английское слово Fear, но для тех, чей язык не привык к английскому, он разрешает произносить Фиер.",
+      buttonLabel: "Fight!",
       portrait: "book/portr_c",
       levelId: "halfway-dead"
     }
@@ -194,15 +197,17 @@ class StoryMenuState extends MusicBeatState
 
   var screenSize = [1280, 720];
   var overrideMusic:Bool = false;
-  var levelId:String = "bookfox";
-  var player = new FlxSprite();
-  var picoToggle:FlxTypedButton<FlxSprite>;
-  var picoToggleState = false;
+  var picoToggle:FlxUITypedButton<FlxSprite>;
+
+  static var picoToggleState = false;
 
   var zakladka = new FlxSprite();
   var zakladka_pico = new FlxSprite();
 
   var portraitView = new FlxSprite();
+  var bg:FlxSprite = new FlxSprite();
+
+  static var abc:FlxGraphic = FlxGraphic.fromRectangle(9, 9, FlxColor.TRANSPARENT);
 
   static var rememberedSelectedIndex:Int = 0;
 
@@ -216,7 +221,7 @@ class StoryMenuState extends MusicBeatState
   {
     zakladka.loadGraphic(Paths.image('book/zakladka'));
     zakladka_pico.loadGraphic(Paths.image('book/zakladka_pico'));
-    picoToggle = new FlxTypedButton<FlxSprite>(884, 50, togglePicoMix);
+    picoToggle = new FlxUITypedButton<FlxSprite>(900, -50, togglePicoMix);
     #if FEATURE_DISCORD_RPC
     DiscordClient.instance.setPresence({state: "In the Menus", details: null});
     #end
@@ -233,7 +238,7 @@ class StoryMenuState extends MusicBeatState
     persistentUpdate = true;
     persistentDraw = true;
 
-    var bg:FlxSprite = new FlxSprite(Paths.image('book/title_screen'));
+    bg.loadGraphic(Paths.image('book/title_screen'));
     // bg.scrollFactor.x = 0;
     // bg.scrollFactor.y = 0.17;
     // bg.setGraphicSize(Std.int(bg.width * 1.2));
@@ -244,34 +249,10 @@ class StoryMenuState extends MusicBeatState
     camFollow = new FlxObject(0, 0, 1, 1);
     add(camFollow);
 
-    magenta = new FlxSprite(Paths.image('menuBGMagenta'));
-    magenta.scrollFactor.x = bg.scrollFactor.x;
-    magenta.scrollFactor.y = bg.scrollFactor.y;
-    magenta.setGraphicSize(Std.int(bg.width));
-    magenta.updateHitbox();
-    magenta.x = bg.x;
-    magenta.y = bg.y;
-    magenta.visible = false;
-
-    // TODO: Why doesn't this line compile I'm going fucking feral
-
-    if (Preferences.flashingLights) add(magenta);
-
-    menuItems = new MenuTypedList<AtlasMenuItem>();
-    add(menuItems);
-    menuItems.onChange.add(onMenuItemChange);
-    menuItems.onAcceptPress.add(function(_) {
-      FlxFlicker.flicker(magenta, 1.1, 0.15, false, true);
-    });
-
-    menuItems.enabled = true; // can move on intro
-
-    // FlxG.camera.setScrollBounds(bg.x, bg.x + bg.width, bg.y, bg.y + bg.height * 1.2);
-
     super.create();
 
     // This has to come AFTER!
-    this.leftWatermarkText.text = Constants.VERSION;
+    this.leftWatermarkText.text = "Why it doesn't work - Foxelyss";
     // this.rightWatermarkText.text = "blablabla test";
 
     // NG.core.calls.event.logEvent('swag').send();
@@ -279,8 +260,8 @@ class StoryMenuState extends MusicBeatState
     characterButtons = [];
     for (i in 0...characters.length)
     {
-      var characterButton = new FlxUIButton(200, 110 + i * buttonHeights, characters[i].name, function() onCharacterSelected(i));
-      characterButton.label.font = "Arial";
+      var characterButton = new FlxUIButton(200, 70 + i * buttonHeights, characters[i].name, function() onCharacterSelected(i));
+      characterButton.label.font = Paths.font("Inconsolata-Regular");
       characterButton.label.size = 46;
       characterButton.resize(360, 65);
       // characterButton.height = buttonHeights;
@@ -293,17 +274,41 @@ class StoryMenuState extends MusicBeatState
       characterButtons.push(characterButton);
     }
 
-    player.loadGraphic(Paths.image('book/A'));
     picoToggle.label = zakladka;
-    picoToggle.draw();
-    // add(player);
+
+    picoToggle.loadGraphicSlice9([], 1, 1, null, 0, -1, false, 1, 1);
+    picoToggle.up_toggle_visible = false;
+    picoToggle.down_toggle_visible = false;
+    picoToggle.over_toggle_visible = false;
+    picoToggle.resize(360, 360);
+    // picoToggle.doResize(360, 360);
+    // picoToggle.label.size.x = 600;
+    // picoToggle.label.size.y = 600;
+    // picoToggle.draw();
     portraitView.x = 740;
-    portraitView.y = 160;
-    portraitView.scale.set(0.5, 0.5);
+    portraitView.y = 110;
+    portraitView.scale.set(0.8, 0.8);
     add(portraitView);
     // Отображаем информацию о первом персонаже по умолчанию
-    updateCharacterInfo(0);
+    updateCharacterInfo(rememberedSelectedIndex);
     Cursor.show();
+
+    var creditsButton = new FlxUIButton(200, 610, "Credits", moveToAttract);
+    creditsButton.label.font = Paths.font("Inconsolata-Regular");
+    creditsButton.label.size = 46;
+    creditsButton.resize(360, 65);
+    add(creditsButton);
+
+    if (picoToggleState)
+    {
+      picoToggle.label = zakladka_pico;
+      bg.loadGraphic(Paths.image('book/title_screen_pico'));
+    }
+    else
+    {
+      bg.loadGraphic(Paths.image('book/title_screen'));
+      picoToggle.label = zakladka;
+    }
   }
 
   /**
@@ -313,7 +318,9 @@ class StoryMenuState extends MusicBeatState
   {
     if (index != -1)
     {
+      rememberedSelectedIndex = index;
       updateCharacterInfo(index);
+      FunkinSound.playOnce(Paths.sound('scrollMenu'), 0.4);
       trace(index);
     }
   }
@@ -324,9 +331,11 @@ class StoryMenuState extends MusicBeatState
     if (picoToggleState)
     {
       picoToggle.label = zakladka_pico;
+      bg.loadGraphic(Paths.image('book/title_screen_pico'));
     }
     else
     {
+      bg.loadGraphic(Paths.image('book/title_screen'));
       picoToggle.label = zakladka;
     }
   }
@@ -342,33 +351,22 @@ class StoryMenuState extends MusicBeatState
     // Обновляем имя персонажа
     if (selectedCharacterName == null)
     {
-      selectedCharacterName = new FlxText(startX, 145, startX - 10, characterData.name, 62);
-      selectedCharacterName.font = "Arial";
+      selectedCharacterName = new FlxText(startX, 70, startX - 10, characterData.name, 62);
+      selectedCharacterName.font = Paths.font("Inconsolata-Regular");
       add(selectedCharacterName);
     }
     else
     {
       selectedCharacterName.text = characterData.name;
     }
-    trace(characterData.description);
-    // Обновляем описание персонажа
-    if (selectedCharacterDescription == null)
-    {
-      selectedCharacterDescription = new FlxText(startX, 500, startX - 10, characterData.description, 42);
-      selectedCharacterDescription.font = "Arial";
-      add(selectedCharacterDescription);
-    }
-    else
-    {
-      portraitView.loadGraphic(Paths.image(characterData.portrait));
-      selectedCharacterDescription.text = characterData.description;
-    }
+
+    portraitView.loadGraphic(Paths.image(characterData.portrait));
 
     // Обновляем кнопку "Играть"
     if (playButton == null)
     {
-      playButton = new FlxUIButton(startX, 600, characterData.buttonLabel, onPlayClicked);
-      playButton.label.font = "Arial";
+      playButton = new FlxUIButton(startX, 610, characterData.buttonLabel, onPlayClicked);
+      playButton.label.font = Paths.font("Inconsolata-Regular");
       playButton.label.size = 46;
       playButton.resize(360, 65);
       add(playButton);
@@ -377,7 +375,6 @@ class StoryMenuState extends MusicBeatState
     else
     {
       playButton.label.text = characterData.buttonLabel;
-      levelId = characterData.levelId;
     }
   }
 
@@ -404,7 +401,7 @@ class StoryMenuState extends MusicBeatState
     PlayStatePlaylist.isStoryMode = true;
 
     var pico:String = picoToggleState ? "-picomix" : "";
-    var targetSongId:String = levelId + pico; // cap?.freeplayData?.data.id ?? 'unknown';
+    var targetSongId:String = characters[rememberedSelectedIndex].levelId + pico; // cap?.freeplayData?.data.id ?? 'unknown';
     var targetSongNullable:Null<Song> = SongRegistry.instance.fetchEntry(targetSongId);
     if (targetSongNullable == null)
     {
@@ -476,6 +473,11 @@ class StoryMenuState extends MusicBeatState
       });
   }
 
+  function moveToAttract():Void
+  {
+    FlxG.switchState(() -> new AttractState());
+  }
+
   function resetCamStuff(?snap:Bool = true):Void
   {
     // FlxG.camera.follow(camFollow, null, 0.06);
@@ -500,8 +502,6 @@ class StoryMenuState extends MusicBeatState
 
   override function closeSubState():Void
   {
-    magenta.visible = false;
-
     super.closeSubState();
   }
 
@@ -748,9 +748,7 @@ class StoryMenuState extends MusicBeatState
       FlxG.sound.music.volume += 0.5 * elapsed;
     }
 
-    if (_exiting) menuItems.enabled = false;
-
-    if (controls.BACK && menuItems.enabled && !menuItems.busy)
+    if (controls.BACK)
     {
       FlxG.switchState(() -> new TitleState());
       FunkinSound.playOnce(Paths.sound('cancelMenu'));
